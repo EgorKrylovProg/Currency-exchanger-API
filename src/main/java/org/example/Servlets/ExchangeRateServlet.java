@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.example.DTO.ExchangeRateDTO;
 import org.example.Exceptions.*;
 import org.example.Repository.ExchangeRateDAO;
+import org.example.Repository.Interfaces.DAOwithUpdate;
 
 import java.io.IOException;
 import java.util.List;
@@ -17,7 +18,7 @@ import java.util.Optional;
 @WebServlet("/exchangeRates/*")
 public class ExchangeRateServlet extends HttpServlet {
 
-    ExchangeRateDAO exchangeRateDAO = new ExchangeRateDAO();
+    DAOwithUpdate<String, ExchangeRateDTO> exchangeRateDAO = new ExchangeRateDAO();
 
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {

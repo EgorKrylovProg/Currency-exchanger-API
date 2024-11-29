@@ -3,15 +3,14 @@ package org.example.Repository;
 import org.example.DTO.CurrencyDTO;
 import org.example.Exceptions.DataDuplicationException;
 import org.example.Exceptions.DatabaseUnavailableException;
-import org.example.Repository.Interfaces.CreateReadDAO;
+import org.example.Repository.Interfaces.DAO;
 
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-public class CurrencyDAO implements CreateReadDAO<String, CurrencyDTO> {
+public class CurrencyDAO implements DAO<String, CurrencyDTO> {
 
     DataBaseConnection conn = new DataBaseConnection();
 

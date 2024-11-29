@@ -5,15 +5,15 @@ import org.example.DTO.ExchangeRateDTO;
 import org.example.Exceptions.DataDuplicationException;
 import org.example.Exceptions.DatabaseUnavailableException;
 import org.example.Exceptions.NoDataFoundException;
-import org.example.Repository.Interfaces.CreateReadDAO;
-import org.example.Repository.Interfaces.UpdateDAO;
+import org.example.Repository.Interfaces.DAO;
+import org.example.Repository.Interfaces.DAOwithUpdate;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class ExchangeRateDAO implements CreateReadDAO<String, ExchangeRateDTO>, UpdateDAO<ExchangeRateDTO> {
+public class ExchangeRateDAO implements DAOwithUpdate<String, ExchangeRateDTO> {
 
     DataBaseConnection conn = new DataBaseConnection();
 

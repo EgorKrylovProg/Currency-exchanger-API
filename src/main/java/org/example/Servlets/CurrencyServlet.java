@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.example.DTO.CurrencyDTO;
 import org.example.Exceptions.*;
 import org.example.Repository.CurrencyDAO;
+import org.example.Repository.Interfaces.DAO;
 
 import java.io.IOException;
 import java.util.List;
@@ -15,7 +16,7 @@ import java.util.Optional;
 @WebServlet("/currencies/*")
 public class CurrencyServlet extends HttpServlet  {
 
-    private final CurrencyDAO currencyDAO = new CurrencyDAO();
+    private final DAO<String, CurrencyDTO> currencyDAO = new CurrencyDAO();
 
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -85,7 +86,11 @@ public class CurrencyServlet extends HttpServlet  {
         } catch (MissingDataRequestException | IncorrectDataException ex) {
             writer.print(ex);
             resp.setStatus(400);
-        } finally {
+        } catch (NoDataFoundException e) {
+            writer.print(e);
+            resp.setStatus(404);
+        }
+        finally {
             writer.close();
         }
     }
