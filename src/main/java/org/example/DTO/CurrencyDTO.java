@@ -25,6 +25,8 @@ public class CurrencyDTO {
         this.sign = sign;
     }
 
+
+
     public int getId() {
         return id;
     }

@@ -2,6 +2,8 @@ package org.example.Repository;
 
 import org.example.DTO.CurrencyDTO;
 import org.example.DTO.ExchangeRateDTO;
+import org.example.Entity.Currency;
+import org.example.Entity.ExchangeRate;
 import org.example.Exceptions.DataDuplicationException;
 import org.example.Exceptions.DatabaseUnavailableException;
 import org.example.Exceptions.NoDataFoundException;
@@ -13,15 +15,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class ExchangeRateDAO implements DAOwithUpdate<String, ExchangeRateDTO> {
+public class ExchangeRateDAO implements DAOwithUpdate<String, ExchangeRate> {
 
     DataBaseConnection conn = new DataBaseConnection();
 
     @Override
-    public List<ExchangeRateDTO> getAll() throws DatabaseUnavailableException {
-        List<ExchangeRateDTO> exchangeRates = new ArrayList<>();
-        CurrencyDTO baseCurrencyDTO;
-        CurrencyDTO targetCurrencyDTO;
+    public List<ExchangeRate> getAll() throws DatabaseUnavailableException {
+        List<ExchangeRate> exchangeRates = new ArrayList<>();
+        Currency baseCurrency;
+        Currency targetCurrency;
 
         try (Connection connection = conn.getConnection()) {
 
@@ -42,26 +44,26 @@ public class ExchangeRateDAO implements DAOwithUpdate<String, ExchangeRateDTO> {
                             "er.rate AS 'rate' FROM exchange_rate AS er " +
                             "JOIN currencies AS c ON er.base_currency_id = c.id " +
                             "JOIN currencies AS ci ON er.target_currency_id = ci.id;");
+
             while (resultSet.next()) {
 
-                baseCurrencyDTO = new CurrencyDTO();
-                targetCurrencyDTO = new CurrencyDTO();
-
                 id = resultSet.getInt("id");
+                baseCurrency = new Currency(
+                        resultSet.getInt("Base_currency_id"),
+                        resultSet.getString("Base_currency_code"),
+                        resultSet.getString("Base_currency_name"),
+                        resultSet.getString("Base_currency_sign")
+                );
 
-                baseCurrencyDTO.setId(resultSet.getInt("Base_currency_id"));
-                baseCurrencyDTO.setCode(resultSet.getString("Base_currency_code"));
-                baseCurrencyDTO.setName(resultSet.getString("Base_currency_name"));
-                baseCurrencyDTO.setSign(resultSet.getString("Base_currency_sign"));
-
-                targetCurrencyDTO.setId(resultSet.getInt("Target_currency_id"));
-                targetCurrencyDTO.setCode(resultSet.getString("Target_currency_code"));
-                targetCurrencyDTO.setName(resultSet.getString("Target_currency_name"));
-                targetCurrencyDTO.setSign(resultSet.getString("Target_currency_sign"));
-
+                targetCurrency = new Currency(
+                        resultSet.getInt("Target_currency_id"),
+                        resultSet.getString("Target_currency_code"),
+                        resultSet.getString("Target_currency_name"),
+                        resultSet.getString("Target_currency_sign")
+                );
                 rate = resultSet.getDouble("rate");
 
-                exchangeRates.add(new ExchangeRateDTO(id, baseCurrencyDTO, targetCurrencyDTO, rate));
+                exchangeRates.add(new ExchangeRate(id, baseCurrency, targetCurrency, rate));
             }
 
         } catch (SQLException e) {
@@ -72,10 +74,8 @@ public class ExchangeRateDAO implements DAOwithUpdate<String, ExchangeRateDTO> {
     }
 
     @Override
-    public Optional<ExchangeRateDTO> get(String codes) throws DatabaseUnavailableException {
-        Optional<ExchangeRateDTO> optionalExchangeRate = Optional.empty();
-        CurrencyDTO baseCurrencyDTO = new CurrencyDTO();
-        CurrencyDTO targetCurrencyDTO = new CurrencyDTO();
+    public Optional<ExchangeRate> get(String codes) throws DatabaseUnavailableException {
+        Optional<ExchangeRate> optionalExchangeRate = Optional.empty();
 
         try (Connection connection = conn.getConnection()) {
 
@@ -99,23 +99,27 @@ public class ExchangeRateDAO implements DAOwithUpdate<String, ExchangeRateDTO> {
 
             ResultSet resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
-                optionalExchangeRate = Optional.of(new ExchangeRateDTO());
+                int id;
+                Currency baseCurrency, targetCurrency;
+                double rate;
 
-                optionalExchangeRate.get().setId(resultSet.getInt("id"));
+                id = resultSet.getInt("id");
+                baseCurrency = new Currency(
+                        resultSet.getInt("Base_currency_id"),
+                        resultSet.getString("Base_currency_code"),
+                        resultSet.getString("Base_currency_name"),
+                        resultSet.getString("Base_currency_sign")
+                );
 
-                baseCurrencyDTO.setId(resultSet.getInt("Base_currency_id"));
-                baseCurrencyDTO.setCode(resultSet.getString("Base_currency_code"));
-                baseCurrencyDTO.setName(resultSet.getString("Base_currency_name"));
-                baseCurrencyDTO.setSign(resultSet.getString("Base_currency_sign"));
-                optionalExchangeRate.get().setBaseCurrency(baseCurrencyDTO);
+                targetCurrency = new Currency(
+                        resultSet.getInt("Target_currency_id"),
+                        resultSet.getString("Target_currency_code"),
+                        resultSet.getString("Target_currency_name"),
+                        resultSet.getString("Target_currency_sign")
+                );
+                rate = resultSet.getDouble("rate");
 
-                targetCurrencyDTO.setId(resultSet.getInt("Target_currency_id"));
-                targetCurrencyDTO.setCode(resultSet.getString("Target_currency_code"));
-                targetCurrencyDTO.setName(resultSet.getString("Target_currency_name"));
-                targetCurrencyDTO.setSign(resultSet.getString("Target_currency_sign"));
-                optionalExchangeRate.get().setTargetCurrency(targetCurrencyDTO);
-
-                optionalExchangeRate.get().setRate(resultSet.getDouble("rate"));
+                optionalExchangeRate = Optional.of(new ExchangeRate(id, baseCurrency, targetCurrency, rate));
             }
 
         } catch (SQLException e) {
@@ -126,7 +130,7 @@ public class ExchangeRateDAO implements DAOwithUpdate<String, ExchangeRateDTO> {
     }
 
     @Override
-    public void set(ExchangeRateDTO exchangeRateDTO) throws DataDuplicationException, DatabaseUnavailableException, NoDataFoundException {
+    public void set(ExchangeRate exchangeRate) throws DataDuplicationException, DatabaseUnavailableException, NoDataFoundException {
         int baseCurrencyId = -1;
         int targetCurrencyId = -1;
 
@@ -134,13 +138,13 @@ public class ExchangeRateDAO implements DAOwithUpdate<String, ExchangeRateDTO> {
 
             PreparedStatement preparedStatement = connection.prepareStatement(
                     "SELECT id, code FROM currencies WHERE code = ? OR code = ?;");
-            preparedStatement.setString(1, exchangeRateDTO.getBaseCurrency().getCode());
-            preparedStatement.setString(2, exchangeRateDTO.getTargetCurrency().getCode());
+            preparedStatement.setString(1, exchangeRate.getBaseCurrency().getCode());
+            preparedStatement.setString(2, exchangeRate.getTargetCurrency().getCode());
 
             ResultSet resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
 
-                if(resultSet.getString("code").equals(exchangeRateDTO.getBaseCurrency().getCode())) {
+                if(resultSet.getString("code").equals(exchangeRate.getBaseCurrency().getCode())) {
                     baseCurrencyId = resultSet.getInt("id");
                     continue;
                 }
@@ -153,7 +157,7 @@ public class ExchangeRateDAO implements DAOwithUpdate<String, ExchangeRateDTO> {
                                 "VALUES(?, ?, ?);");
             preparedStatement.setInt(1, baseCurrencyId);
             preparedStatement.setInt(2, targetCurrencyId);
-            preparedStatement.setDouble(3, exchangeRateDTO.getRate());
+            preparedStatement.setDouble(3, exchangeRate.getRate());
 
             preparedStatement.executeUpdate();
 
@@ -165,7 +169,7 @@ public class ExchangeRateDAO implements DAOwithUpdate<String, ExchangeRateDTO> {
     }
 
     @Override
-    public void update(ExchangeRateDTO exchangeRateDTO) throws DatabaseUnavailableException {
+    public void update(ExchangeRate exchangeRate) throws DatabaseUnavailableException {
         int baseCurrencyId = -1;
         int targetCurrencyId = -1;
 
@@ -173,13 +177,13 @@ public class ExchangeRateDAO implements DAOwithUpdate<String, ExchangeRateDTO> {
 
             PreparedStatement preparedStatement = connection.prepareStatement(
                     "SELECT id, code FROM currencies WHERE code = ? OR code = ?;");
-            preparedStatement.setString(1, exchangeRateDTO.getBaseCurrency().getCode());
-            preparedStatement.setString(2, exchangeRateDTO.getTargetCurrency().getCode());
+            preparedStatement.setString(1, exchangeRate.getBaseCurrency().getCode());
+            preparedStatement.setString(2, exchangeRate.getTargetCurrency().getCode());
 
             ResultSet resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
 
-                if(resultSet.getString("code").equals(exchangeRateDTO.getBaseCurrency().getCode())) {
+                if(resultSet.getString("code").equals(exchangeRate.getBaseCurrency().getCode())) {
                     baseCurrencyId = resultSet.getInt("id");
                     continue;
                 }
@@ -191,7 +195,7 @@ public class ExchangeRateDAO implements DAOwithUpdate<String, ExchangeRateDTO> {
                         "UPDATE exchange_rate " +
                             "SET rate = ? " +
                             "WHERE base_currency_id = ? AND target_currency_id = ?;");
-            preparedStatement.setDouble(1, exchangeRateDTO.getRate());
+            preparedStatement.setDouble(1, exchangeRate.getRate());
             preparedStatement.setInt(2, baseCurrencyId);
             preparedStatement.setDouble(3, targetCurrencyId);
 

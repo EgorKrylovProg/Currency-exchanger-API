@@ -6,8 +6,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.example.DTO.CurrencyDTO;
 import org.example.Exceptions.*;
-import org.example.Repository.CurrencyDAO;
-import org.example.Repository.Interfaces.DAO;
+import org.example.Service.interfaces.CreatableAndReadableService;
+import org.example.Service.CurrencyService;
 
 import java.io.IOException;
 import java.util.List;
@@ -16,7 +16,7 @@ import java.util.Optional;
 @WebServlet("/currencies/*")
 public class CurrencyServlet extends HttpServlet  {
 
-    private final DAO<String, CurrencyDTO> currencyDAO = new CurrencyDAO();
+    private final CreatableAndReadableService<String, CurrencyDTO> service = new CurrencyService();
 
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -28,13 +28,13 @@ public class CurrencyServlet extends HttpServlet  {
             if (req.getPathInfo() != null) {
                 if (req.getPathInfo().substring(1).isEmpty()) throw new MissingDataRequestException("The currency code is missing in the request!");
 
-                Optional<CurrencyDTO> returnedCurrencyDTO = currencyDAO.get(req.getPathInfo().substring(1));
+                Optional<CurrencyDTO> returnedCurrencyDTO = service.read(req.getPathInfo().substring(1));
                 if (returnedCurrencyDTO.isEmpty()) throw new NoDataFoundException("The currency was not found!");
                 returnedCurrencyDTO.ifPresent(writer::print);
                 return;
             }
 
-            List<CurrencyDTO> currenciesDTO = currencyDAO.getAll();
+            List<CurrencyDTO> currenciesDTO = service.readAll();
 
             var stringBuilder = new StringBuilder("[\n");
             for (CurrencyDTO currencyDTO : currenciesDTO) {
@@ -71,9 +71,9 @@ public class CurrencyServlet extends HttpServlet  {
             if (code == null || name == null || sign == null) throw new MissingDataRequestException("Required field is missing in the request!");
             if (code.isBlank() || code.length() != 3 || name.isBlank() || sign.length() > 2) throw new IncorrectDataException("Invalid field values!");
 
-            currencyDAO.set(new CurrencyDTO(code, name, sign));
+            service.create(new CurrencyDTO(code, name, sign));
 
-            Optional<CurrencyDTO> returnedCurrencyDTO = currencyDAO.get(req.getParameter("code"));
+            Optional<CurrencyDTO> returnedCurrencyDTO = service.read(req.getParameter("code"));
             returnedCurrencyDTO.ifPresent(writer::print);
 
             resp.setStatus(201);
